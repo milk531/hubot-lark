@@ -1,6 +1,12 @@
 'use strict'
 
-const { Adapter, TextMessage, EnterMessage, LeaveMessage, User } = require.main.require('hubot/es2015');
+const {
+    Adapter,
+    TextMessage,
+    EnterMessage,
+    LeaveMessage,
+    User
+} = require.main.require('hubot/es2015');
 
 class AppMessage extends TextMessage {
     constructor(user, text, id, appid) {
@@ -21,20 +27,24 @@ class Lark extends Adapter {
 
     send(envelope, ...strings) {
         if (typeof strings[0] === 'object') {
-            this.sendTextMessage(strings[0], envelope.room, '');
+            this.sendTextMessage(strings[0], {
+                room: envelope.room,
+                user: envelope.user.id,
+            });
         } else if (typeof strings[0] === 'string') {
             const cardBody = {
-                elements: [
-                    {
-                        tag: 'div',
-                        text: {
-                            tag: 'plain_text',
-                            content: strings[0]
-                        }
+                elements: [{
+                    tag: 'div',
+                    text: {
+                        tag: 'plain_text',
+                        content: strings[0]
                     }
-                ]
+                }]
             }
-            this.sendTextMessage(cardBody, envelope.room, '');
+            this.sendTextMessage(cardBody, {
+                room: envelope.room,
+                user: envelope.user.id,
+            });
         } else {
             this.robot.emit('error', 'Unsupported Message Type');
         }
@@ -42,20 +52,26 @@ class Lark extends Adapter {
 
     reply(envelope, ...strings) {
         if (typeof strings[0] === 'object') {
-            this.sendTextMessage(strings[0], envelope.room, envelope.message.id);
+            this.sendTextMessage(strings[0], {
+                room: envelope.room,
+                user: envelope.user.id,
+                reply: envelope.message.id
+            });
         } else if (typeof strings[0] === 'string') {
             const cardBody = {
-                elements: [
-                    {
-                        tag: 'div',
-                        text: {
-                            tag: 'plain_text',
-                            content: strings[0]
-                        }
+                elements: [{
+                    tag: 'div',
+                    text: {
+                        tag: 'plain_text',
+                        content: strings[0]
                     }
-                ]
+                }]
             }
-            this.sendTextMessage(cardBody, envelope.room, envelope.message.id);
+            this.sendTextMessage(cardBody, {
+                room: envelope.room,
+                user: envelope.user.id,
+                reply: envelope.message.id
+            });
         } else {
             this.robot.emit('error', 'Unsupported Message Type');
         }
@@ -73,30 +89,50 @@ class Lark extends Adapter {
             try {
                 const data = authRequest(req);
                 if (data) {
-                    this.robot.logger.info(data);
                     const msgType = data.type;
                     switch (msgType) {
                         case 'url_verification':
-                            res.send({ challenge: data.challenge });
+                            res.send({
+                                challenge: data.challenge
+                            });
                             break;
                         case 'event_callback':
-                            data.event.app_id;//cli_9ee6e9e36fba100d
-                            data.event.chat_type;//group
                             const eventType = data.event.type;
-                            // data.text '<at open_id="ou_a733ccf98ad0bfb3f5c86777f68865e4">@Bender</at> sandbox list'
-                            const user = new User(data.event.user_open_id, {
-
-                            });
-                            user.room = data.event.open_chat_id;
-                            this.robot.logger.info(user);
-                            this.robot.logger.info(user.room);
-                            const message = new AppMessage(
-                                user,
-                                `spaceship ${data.event.text_without_at_bot}`,
-                                data.event.open_message_id,
-                                data.event.app_id);
-                            this.robot.logger.info(message);
-                            this.robot.receive(message);
+                            if (eventType === 'message') {
+                                const user = new User(data.event.open_id);
+                                if (data.event.chat_type === 'group') {
+                                    user.room = data.event.open_chat_id;
+                                }
+                                const message = new AppMessage(
+                                    user,
+                                    `spaceship ${data.event.text_without_at_bot}`,
+                                    data.event.open_message_id,
+                                    data.event.app_id);
+                                this.robot.receive(message);
+                            } else if(eventType === 'add_user_to_chat'){
+                                data.event.users.forEach(u => {
+                                    const user = new User(u.open_id,{room:data.event.chat_id,name:u.Name?u.Name:u.name});
+                                    const message = new EnterMessage(user, null, data.uuid);
+                                    this.robot.receive(message);
+                                });
+                            } else if(eventType === 'remove_user_from_chat'){
+                                data.event.users.forEach(u => {
+                                    const user = new User(u.open_id,{room:data.event.chat_id,name:u.Name?u.Name:u.name});
+                                    const message = new LeaveMessage(user, null, data.uuid);
+                                    this.robot.receive(message);
+                                });
+                            } else if(eventType === 'user_status_change') {
+                                this.robot.logger.info(data.event.current_status);
+                                this.robot.logger.info(data.event.before_status);
+                                if( data.event.current_status.is_active && data.event.before_status.is_active != data.event.current_status.is_active ){
+                                    this.getUserInfo(data.event.open_id).then((user) => {
+                                        this.robot.logger.info(user);
+                                        this.robot.emit('lark_user_active', user);
+                                    }).catch((err)=>{
+                                        this.robot.emit('error', err);
+                                    });
+                                }
+                            }
                             res.send('ok');
                             break;
                         default:
@@ -110,16 +146,16 @@ class Lark extends Adapter {
             }
         });
 
-        this.robot.listenerMiddleware((context, next, done) => {
-            this.robot.logger.info(context.response.message.user.id);
-            this.robot.logger.info(context.listener.options.role);
-            next()
-        });
-        this.getRoleList().then((list) => {
-            this.robot.logger.info(list);
-        }).catch((err) => {
-            this.robot.logger.info(err);
-        });
+        // this.robot.listenerMiddleware((context, next, done) => {
+        //     this.robot.logger.info(context.response.message.user.id);
+        //     this.robot.logger.info(context.listener.options.role);
+        //     next()
+        // });
+        // this.getRoleList().then((list) => {
+        //     this.robot.logger.info(list);
+        // }).catch((err) => {
+        //     this.robot.logger.info(err);
+        // });
         this.emit('connected');
         this.robot.logger.info(`[startup] connected`);
     }
@@ -127,7 +163,7 @@ class Lark extends Adapter {
     authRequest(req) {
         try {
             const data = req.body.payload ? JSON.parse(req.body.payload) : req.body;
-            if (data.token != 'ajOQVTEz5b3rN5tYDZQYvhqu2scZTwuw') { //TODO move to ENV
+            if (data.token != process.env.LARK_EVENT_VERIFICATION_TOKEN) {
                 this.emit('error', 'Auth Error');
                 return null;
             }
@@ -144,8 +180,8 @@ class Lark extends Adapter {
                 resolve(this.#tenant_access_token);
             } else {
                 const authData = JSON.stringify({
-                    app_id: 'cli_9ee6e9e36fba100d',
-                    app_secret: 'IsZTQq9ijKgMGcU5n3vbrggyxlc5QIuV',
+                    app_id: process.env.LARK_APP_ID,
+                    app_secret: process.env.LARK_APP_SECRET,
                 });
                 this.robot.http('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal/')
                     .header('Content-Type', 'application/json')
@@ -266,14 +302,25 @@ class Lark extends Adapter {
         });
     }
 
-    sendTextMessage(msgBody, room, reply) {
+    sendTextMessage(msgBody, {
+        user,
+        room,
+        reply
+    }) {
         return new Promise(async (resolve, reject) => {
             const token = await this.getTenantToken();
             const cardMsg = {
-                chat_id: room,
                 msg_type: 'interactive',
-                root_id: reply,
                 card: msgBody
+            }
+            if (room) {
+                cardMsg.chat_id = room;
+            }
+            if (user) {
+                cardMsg.open_id = user;
+            }
+            if (reply) {
+                cardMsg.root_id = reply;
             }
             this.robot.http('https://open.feishu.cn/open-apis/message/v4/send/')
                 .header('Content-Type', 'application/json')
