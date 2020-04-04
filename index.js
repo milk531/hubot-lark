@@ -284,7 +284,7 @@ class Lark extends Adapter {
                     else if (response.statusCode == 200) {
                         const data = JSON.parse(body);
                         if (data.code == 0) {
-                            const len = data.data.user_list.length;
+                            const len = data.data.user_list ? data.data.user_list.length : 0;
                             for (let i = 0; i < len; i++) {
                                 if (data.data.user_list[i].open_id === open_id) {
                                     resolve(true);
