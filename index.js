@@ -146,16 +146,10 @@ class Lark extends Adapter {
             }
         });
 
-        // this.robot.listenerMiddleware((context, next, done) => {
-        //     this.robot.logger.info(context.response.message.user.id);
-        //     this.robot.logger.info(context.listener.options.role);
-        //     next()
-        // });
-        // this.getRoleList().then((list) => {
-        //     this.robot.logger.info(list);
-        // }).catch((err) => {
-        //     this.robot.logger.info(err);
-        // });
+        this.robot.router.get('/ping', (req, res) => {
+            res.send('pong');
+        });
+
         this.emit('connected');
         this.robot.logger.info(`[startup] connected`);
     }
