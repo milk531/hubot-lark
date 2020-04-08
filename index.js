@@ -30,6 +30,11 @@ class Lark extends Adapter {
             this.sendTextMessage(strings[0], {
                 room: envelope.room,
                 user: envelope.user.id,
+            }).then((data) => {
+
+            }).catch((err) => {
+                this.robot.emit('error', err);
+                //TODO retry
             });
         } else if (typeof strings[0] === 'string') {
             const cardBody = {
@@ -44,6 +49,11 @@ class Lark extends Adapter {
             this.sendTextMessage(cardBody, {
                 room: envelope.room,
                 user: envelope.user.id,
+            }).then((data) => {
+
+            }).catch((err) => {
+                this.robot.emit('error', err);
+                //TODO retry
             });
         } else {
             this.robot.emit('error', 'Unsupported Message Type');
@@ -56,6 +66,11 @@ class Lark extends Adapter {
                 room: envelope.room,
                 user: envelope.user.id,
                 reply: envelope.message.id
+            }).then((data) => {
+
+            }).catch((err) => {
+                this.robot.emit('error', err);
+                //TODO retry
             });
         } else if (typeof strings[0] === 'string') {
             const cardBody = {
@@ -71,6 +86,11 @@ class Lark extends Adapter {
                 room: envelope.room,
                 user: envelope.user.id,
                 reply: envelope.message.id
+            }).then((data) => {
+
+            }).catch((err) => {
+                this.robot.emit('error', err);
+                //TODO retry
             });
         } else {
             this.robot.emit('error', 'Unsupported Message Type');
@@ -80,9 +100,9 @@ class Lark extends Adapter {
     run() {
         this.robot.logger.info(`[startup] Lark adapter in use`);
         this.robot.logger.info(`[startup] Respond to name: ${this.robot.name}`)
-        this.robot.error((err, res) => {
-            this.robot.logger.error(err);
-        });
+        // this.robot.error((err, res) => {
+        //     this.robot.logger.error(err);
+        // });
 
         const authRequest = this.authRequest.bind(this.robot);
         this.robot.router.post('/hubot/subscribe', (req, res) => {
@@ -163,7 +183,7 @@ class Lark extends Adapter {
             }
             return data;
         } catch (e) {
-            this.emit('error', e);
+            this.emit('error', `Auth Error ${e}`);
         }
         return null;
     }
@@ -181,18 +201,18 @@ class Lark extends Adapter {
                     .header('Content-Type', 'application/json')
                     .post(authData)((err, response, body) => {
                         if (err)
-                            reject(err);
+                            reject(`GetTenantToken Error ${JSON.stringify(err)}`);
                         else if (response.statusCode == 200) {
                             const data = JSON.parse(body);
                             if (data.code == 0) {
                                 this.#tenant_access_token = data.tenant_access_token;
-                                this.#expire = Date.now() + data.expire * 1000 - 10000;
+                                this.#expire = Date.now() + 3000000;
                                 resolve(this.#tenant_access_token);
                             } else {
-                                reject(data.msg);
+                                reject(`GetTenantToken Error ${data.code} ${data.msg}`);
                             }
                         } else {
-                            reject('http request error');
+                            reject(`GetTenantToken Error ${response.statusCode} ${body}`);
                         }
                     });
             }
@@ -207,16 +227,16 @@ class Lark extends Adapter {
                 .header('Authorization', `Bearer ${token}`)
                 .get()((err, response, body) => {
                     if (err)
-                        reject(err);
+                        reject(`GetUserInfo Error ${JSON.stringify(err)}`);
                     else if (response.statusCode == 200) {
                         const data = JSON.parse(body);
                         if (data.code == 0) {
                             resolve(data.data.user_infos[0]);
                         } else {
-                            reject(data.msg);
+                            reject(`GetUserInfo Error ${data.code} ${data.msg}`);
                         }
                     } else {
-                        reject('http request error');
+                        reject(`GetUserInfo Error ${response.statusCode} ${body}`);
                     }
                 });
         });
@@ -230,16 +250,16 @@ class Lark extends Adapter {
                 .header('Authorization', `Bearer ${token}`)
                 .get()((err, response, body) => {
                     if (err)
-                        reject(err);
+                        reject(`GetBotInfo Error ${JSON.stringify(err)}`);
                     else if (response.statusCode == 200) {
                         const data = JSON.parse(body);
                         if (data.code == 0) {
                             resolve(data.bot);
                         } else {
-                            reject(data.msg);
+                            reject(`GetBotInfo Error ${data.code} ${data.msg}`);
                         }
                     } else {
-                        reject('http request error');
+                        reject(`GetBotInfo Error ${response.statusCode} ${body}`);
                     }
                 });
         });
@@ -252,16 +272,16 @@ class Lark extends Adapter {
                 .header('Authorization', `Bearer ${token}`)
                 .get()((err, response, body) => {
                     if (err)
-                        reject(err);
+                        reject(`GetRoleList Error ${JSON.stringify(err)}`);
                     else if (response.statusCode == 200) {
                         const data = JSON.parse(body);
                         if (data.code == 0) {
                             resolve(data.data.role_list);
                         } else {
-                            reject(data.msg);
+                            reject(`GetRoleList Error ${data.code} ${data.msg}`);
                         }
                     } else {
-                        reject('http request error');
+                        reject(`GetRoleList Error ${response.statusCode} ${body}`);
                     }
                 });
         });
@@ -274,7 +294,7 @@ class Lark extends Adapter {
                 .header('Authorization', `Bearer ${token}`)
                 .get()((err, response, body) => {
                     if (err)
-                        reject(err);
+                        reject(`IsRole Error ${JSON.stringify(err)}`);
                     else if (response.statusCode == 200) {
                         const data = JSON.parse(body);
                         if (data.code == 0) {
@@ -287,10 +307,10 @@ class Lark extends Adapter {
                             }
                             resolve(false);
                         } else {
-                            reject(data.msg);
+                            reject(`IsRole Error ${data.code} ${data.msg}`);
                         }
                     } else {
-                        reject('http request error');
+                        reject(`IsRole Error ${response.statusCode} ${body}`);
                     }
                 });
         });
@@ -321,16 +341,16 @@ class Lark extends Adapter {
                 .header('Authorization', `Bearer ${token}`)
                 .post(JSON.stringify(cardMsg))((err, response, body) => {
                     if (err)
-                        reject(err);
+                        reject(`SendTextMessage Error ${JSON.stringify(err)}`);
                     else if (response.statusCode == 200) {
                         const data = JSON.parse(body);
                         if (data.code == 0) {
                             resolve(data.data);
                         } else {
-                            reject(data.msg);
+                            reject(`SendTextMessage Error ${data.code} ${data.msg}`);
                         }
                     } else {
-                        reject('http request error');
+                        reject(`SendTextMessage Error ${response.statusCode} ${body}`);
                     }
                 });
         });
