@@ -61,14 +61,19 @@ class Lark extends Adapter {
     }
 
     reply(envelope, ...strings) {
+        console.info(envelope);
+        console.info(strings);
         if (typeof strings[0] === 'object') {
             this.sendTextMessage(strings[0], {
                 room: envelope.room,
                 user: envelope.user.id,
                 reply: envelope.message.id
             }).then((data) => {
-
+                console.info('send success');
+                console.info(data);
             }).catch((err) => {
+                console.info('send err');
+                console.info(err);
                 this.robot.emit('error', err);
                 //TODO retry
             });
@@ -87,8 +92,11 @@ class Lark extends Adapter {
                 user: envelope.user.id,
                 reply: envelope.message.id
             }).then((data) => {
-
+                console.info('send success');
+                console.info(data);
             }).catch((err) => {
+                console.info('send err');
+                console.info(err);
                 this.robot.emit('error', err);
                 //TODO retry
             });
@@ -100,17 +108,18 @@ class Lark extends Adapter {
     run() {
         this.robot.logger.info(`[startup] Lark adapter in use`);
         this.robot.logger.info(`[startup] Respond to name: ${this.robot.name}`)
-        // this.robot.error((err, res) => {
-        //     this.robot.logger.error(err);
-        // });
+        this.robot.error((err, res) => {
+            this.robot.logger.error(err);
+        });
 
         const authRequest = this.authRequest.bind(this.robot);
         this.robot.router.post('/hubot/subscribe', (req, res) => {
             try {
                 const data = authRequest(req);
+                console.info(data);
                 if (data) {
                     const msgType = data.type;
-                    switch (msgType) {
+                    switch (msgType) {                        
                         case 'url_verification':
                             res.send({
                                 challenge: data.challenge
