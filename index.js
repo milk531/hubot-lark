@@ -61,19 +61,12 @@ class Lark extends Adapter {
     }
 
     reply(envelope, ...strings) {
-        console.info(envelope);
-        console.info(strings);
         if (typeof strings[0] === 'object') {
             this.sendTextMessage(strings[0], {
                 room: envelope.room,
                 user: envelope.user.id,
                 reply: envelope.message.id
-            }).then((data) => {
-                console.info('send success');
-                console.info(data);
-            }).catch((err) => {
-                console.info('send err');
-                console.info(err);
+            }).then((data) => {}).catch((err) => {
                 this.robot.emit('error', err);
                 //TODO retry
             });
@@ -91,12 +84,7 @@ class Lark extends Adapter {
                 room: envelope.room,
                 user: envelope.user.id,
                 reply: envelope.message.id
-            }).then((data) => {
-                console.info('send success');
-                console.info(data);
-            }).catch((err) => {
-                console.info('send err');
-                console.info(err);
+            }).then((data) => {}).catch((err) => {
                 this.robot.emit('error', err);
                 //TODO retry
             });
@@ -107,7 +95,8 @@ class Lark extends Adapter {
 
     run() {
         this.robot.logger.info(`[startup] Lark adapter in use`);
-        this.robot.logger.info(`[startup] Respond to name: ${this.robot.name}`)
+        this.robot.logger.info(`[startup] Respond to name: ${this.robot.name}`);
+
         this.robot.error((err, res) => {
             this.robot.logger.error(err);
         });
@@ -116,10 +105,9 @@ class Lark extends Adapter {
         this.robot.router.post('/hubot/subscribe', (req, res) => {
             try {
                 const data = authRequest(req);
-                console.info(data);
                 if (data) {
                     const msgType = data.type;
-                    switch (msgType) {                        
+                    switch (msgType) {
                         case 'url_verification':
                             res.send({
                                 challenge: data.challenge
@@ -138,26 +126,32 @@ class Lark extends Adapter {
                                     data.event.open_message_id,
                                     data.event.app_id);
                                 this.robot.receive(message);
-                            } else if(eventType === 'add_user_to_chat'){
+                            } else if (eventType === 'add_user_to_chat') {
                                 data.event.users.forEach(u => {
-                                    const user = new User(u.open_id,{room:data.event.chat_id,name:u.Name?u.Name:u.name});
+                                    const user = new User(u.open_id, {
+                                        room: data.event.chat_id,
+                                        name: u.Name ? u.Name : u.name
+                                    });
                                     const message = new EnterMessage(user, null, data.uuid);
                                     this.robot.receive(message);
                                 });
-                            } else if(eventType === 'remove_user_from_chat'){
+                            } else if (eventType === 'remove_user_from_chat') {
                                 data.event.users.forEach(u => {
-                                    const user = new User(u.open_id,{room:data.event.chat_id,name:u.Name?u.Name:u.name});
+                                    const user = new User(u.open_id, {
+                                        room: data.event.chat_id,
+                                        name: u.Name ? u.Name : u.name
+                                    });
                                     const message = new LeaveMessage(user, null, data.uuid);
                                     this.robot.receive(message);
                                 });
-                            } else if(eventType === 'user_status_change') {
+                            } else if (eventType === 'user_status_change') {
                                 this.robot.logger.info(data.event.current_status);
                                 this.robot.logger.info(data.event.before_status);
-                                if( data.event.current_status.is_active && data.event.before_status.is_active != data.event.current_status.is_active ){
+                                if (data.event.current_status.is_active && data.event.before_status.is_active != data.event.current_status.is_active) {
                                     this.getUserInfo(data.event.open_id).then((user) => {
                                         this.robot.logger.info(user);
                                         this.robot.emit('lark_user_active', user);
-                                    }).catch((err)=>{
+                                    }).catch((err) => {
                                         this.robot.emit('error', err);
                                     });
                                 }
@@ -199,7 +193,7 @@ class Lark extends Adapter {
 
     getTenantToken() {
         return new Promise((resolve, reject) => {
-            if (this.#tenant_access_token && this.#expire < Date.now()) {
+            if (this.#tenant_access_token && Date.now() < this.#expire) {
                 resolve(this.#tenant_access_token);
             } else {
                 const authData = JSON.stringify({
@@ -215,7 +209,7 @@ class Lark extends Adapter {
                             const data = JSON.parse(body);
                             if (data.code == 0) {
                                 this.#tenant_access_token = data.tenant_access_token;
-                                this.#expire = Date.now() + 3000000;
+                                this.#expire = Date.now() + data.expire * 1000 - 300000;
                                 resolve(this.#tenant_access_token);
                             } else {
                                 reject(`GetTenantToken Error ${data.code} ${data.msg}`);
@@ -295,33 +289,51 @@ class Lark extends Adapter {
                 });
         });
     }
+
+    clearRoleCache(role_id) {
+        this.robot.brain.remove(`role:${role_id}`);
+    }
+
     isRole(open_id, role_id) {
         return new Promise(async (resolve, reject) => {
-            const token = await this.getTenantToken();
-            this.robot.http(`https://open.feishu.cn/open-apis/contact/v2/role/members?role_id=${role_id}&page_size=50`)
-                .header('Content-Type', 'application/json')
-                .header('Authorization', `Bearer ${token}`)
-                .get()((err, response, body) => {
-                    if (err)
-                        reject(`IsRole Error ${JSON.stringify(err)}`);
-                    else if (response.statusCode == 200) {
-                        const data = JSON.parse(body);
-                        if (data.code == 0) {
-                            const len = data.data.user_list ? data.data.user_list.length : 0;
-                            for (let i = 0; i < len; i++) {
-                                if (data.data.user_list[i].open_id === open_id) {
-                                    resolve(true);
-                                    return;
-                                }
-                            }
-                            resolve(false);
-                        } else {
-                            reject(`IsRole Error ${data.code} ${data.msg}`);
-                        }
-                    } else {
-                        reject(`IsRole Error ${response.statusCode} ${body}`);
+            const user_list = this.robot.brain.get(`role:${role_id}`);
+            if (user_list) {
+                const len = user_list.length;
+                for (let i = 0; i < len; i++) {
+                    if (user_list[i].open_id === open_id) {
+                        resolve(true);
+                        return;
                     }
-                });
+                }
+                resolve(false);
+            } else {
+                const token = await this.getTenantToken();
+                this.robot.http(`https://open.feishu.cn/open-apis/contact/v2/role/members?role_id=${role_id}&page_size=50`)
+                    .header('Content-Type', 'application/json')
+                    .header('Authorization', `Bearer ${token}`)
+                    .get()((err, response, body) => {
+                        if (err)
+                            reject(`IsRole Error ${JSON.stringify(err)}`);
+                        else if (response.statusCode == 200) {
+                            const data = JSON.parse(body);
+                            if (data.code == 0) {
+                                this.robot.brain.set(`role:${role_id}`, data.data.user_list);
+                                const len = data.data.user_list ? data.data.user_list.length : 0;
+                                for (let i = 0; i < len; i++) {
+                                    if (data.data.user_list[i].open_id === open_id) {
+                                        resolve(true);
+                                        return;
+                                    }
+                                }
+                                resolve(false);
+                            } else {
+                                reject(`IsRole Error ${data.code} ${data.msg}`);
+                            }
+                        } else {
+                            reject(`IsRole Error ${response.statusCode} ${body}`);
+                        }
+                    });
+            }
         });
     }
 
