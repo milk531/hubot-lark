@@ -155,6 +155,13 @@ class Lark extends Adapter {
                                     }).catch((err) => {
                                         this.robot.emit('error', err);
                                     });
+                                } else if (data.event.current_status.is_resigned) {
+                                    this.getUserInfo(data.event.open_id).then((user) => {
+                                        this.robot.logger.info(user);
+                                        this.robot.emit('lark_user_resigned', user);
+                                    }).catch((err) => {
+                                        this.robot.emit('error', err);
+                                    });
                                 }
                             }
                             res.send('ok');
