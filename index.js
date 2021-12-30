@@ -149,14 +149,14 @@ class Lark extends Adapter {
                                 this.robot.logger.info(data.event.current_status);
                                 this.robot.logger.info(data.event.before_status);
                                 if (data.event.current_status.is_active && data.event.before_status.is_active != data.event.current_status.is_active) {
-                                    this.getUserInfo(data.event.open_id).then((user) => {
+                                    this.getUserInfo(data.event.open_id,'open_id').then((user) => {
                                         this.robot.logger.info(user);
                                         this.robot.emit('lark_user_active', user);
                                     }).catch((err) => {
                                         this.robot.emit('error', err);
                                     });
                                 } else if (data.event.current_status.is_resigned) {
-                                    this.getUserInfo(data.event.open_id).then((user) => {
+                                    this.getUserInfo(data.event.open_id,'open_id').then((user) => {
                                         this.robot.logger.info(user);
                                         this.robot.emit('lark_user_resigned', user);
                                     }).catch((err) => {
