@@ -255,6 +255,29 @@ class Lark extends Adapter {
         });
     }
 
+    getUser(userId) {
+        return new Promise(async (resolve, reject) => {
+            const token = await this.getTenantToken();
+            this.robot.http(`https://open.feishu.cn/open-apis/contact/v3/users/${userId}?user_id_type=user_id`)
+                .header('Content-Type', 'application/json')
+                .header('Authorization', `Bearer ${token}`)
+                .get()((err, response, body) => {
+                    if (err)
+                        reject(`GetUserInfo Error ${JSON.stringify(err)}`);
+                    else if (response.statusCode == 200) {
+                        const data = JSON.parse(body);
+                        if (data.code == 0) {
+                            resolve(data.data.user);
+                        } else {
+                            reject(`GetUserInfo Error ${data.code} ${data.msg}`);
+                        }
+                    } else {
+                        reject(`GetUserInfo Error ${response.statusCode} ${body}`);
+                    }
+                });
+        });
+    }
+
     getBotInfo() {
         return new Promise(async (resolve, reject) => {
             const token = await this.getTenantToken();
