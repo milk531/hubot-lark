@@ -232,33 +232,10 @@ class Lark extends Adapter {
         });
     }
 
-    getUserInfo(openId) {
+    getUserInfo(userId,idType) {
         return new Promise(async (resolve, reject) => {
             const token = await this.getTenantToken();
-            this.robot.http(`https://open.feishu.cn/open-apis/contact/v1/user/batch_get?open_ids=${openId}`)
-                .header('Content-Type', 'application/json')
-                .header('Authorization', `Bearer ${token}`)
-                .get()((err, response, body) => {
-                    if (err)
-                        reject(`GetUserInfo Error ${JSON.stringify(err)}`);
-                    else if (response.statusCode == 200) {
-                        const data = JSON.parse(body);
-                        if (data.code == 0) {
-                            resolve(data.data.user_infos[0]);
-                        } else {
-                            reject(`GetUserInfo Error ${data.code} ${data.msg}`);
-                        }
-                    } else {
-                        reject(`GetUserInfo Error ${response.statusCode} ${body}`);
-                    }
-                });
-        });
-    }
-
-    getUser(userId) {
-        return new Promise(async (resolve, reject) => {
-            const token = await this.getTenantToken();
-            this.robot.http(`https://open.feishu.cn/open-apis/contact/v3/users/${userId}?user_id_type=user_id`)
+            this.robot.http(`https://open.feishu.cn/open-apis/contact/v3/users/${userId}${idType?'?user_id_type='+idType:''}`)
                 .header('Content-Type', 'application/json')
                 .header('Authorization', `Bearer ${token}`)
                 .get()((err, response, body) => {
@@ -379,19 +356,23 @@ class Lark extends Adapter {
             const token = await this.getTenantToken();
             const cardMsg = {
                 msg_type: 'interactive',
-                card: msgBody
+                content: JSON.stringify(msgBody),
+                receive_id: 0
             }
+            let msg_url;
             if (room) {
-                cardMsg.chat_id = room;
+                cardMsg.receive_id = room;
+                msg_url = `https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id`;
             }
             if (user) {
-                cardMsg.open_id = user;
+                cardMsg.receive_id = user;
+                msg_url = `https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=open_id`;
             }
             if (reply) {
-                cardMsg.root_id = reply;
+                msg_url = `https://open.feishu.cn/open-apis/im/v1/messages/${reply}/reply`;
             }
-            this.robot.http('https://open.feishu.cn/open-apis/message/v4/send/')
-                .header('Content-Type', 'application/json')
+            this.robot.http(msg_url)
+                .header('Content-Type', 'application/json; charset=utf-8')
                 .header('Authorization', `Bearer ${token}`)
                 .post(JSON.stringify(cardMsg))((err, response, body) => {
                     if (err)
