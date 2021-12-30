@@ -163,6 +163,8 @@ class Lark extends Adapter {
                                         this.robot.emit('error', err);
                                     });
                                 }
+                            } else {
+                                this.robot.emit(eventType, data.event);
                             }
                             res.send('ok');
                             break;
