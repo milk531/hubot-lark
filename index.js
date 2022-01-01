@@ -104,7 +104,7 @@ class Lark extends Adapter {
         const authRequest = this.authRequest.bind(this.robot);
         this.robot.router.post('/hubot/subscribe', (req, res) => {
             try {
-                this.robot.logger.info(`[debug] Lark msg: ${req.body}`);
+                // this.robot.logger.info(`[debug] Lark msg: ${req.body}`);
                 const data = authRequest(req);
                 if (data) {
                     const msgType = data.type;
@@ -115,6 +115,7 @@ class Lark extends Adapter {
                             });
                             break;
                         case 'event_callback':
+                            this.robot.logger.info(`[debug] event: ${JSON.stringify(data.event)}`);
                             const eventType = data.event.type;
                             if (eventType === 'message') {
                                 const user = new User(data.event.open_id);
@@ -277,6 +278,77 @@ class Lark extends Adapter {
                 });
         });
     }
+
+    getGroupList() {
+        return new Promise(async (resolve, reject) => {
+            const token = await this.getTenantToken();
+            this.robot.http(`https://open.feishu.cn/open-apis/contact/v3/group/simplelist?page_size=100`)
+                .header('Content-Type', 'application/json')
+                .header('Authorization', `Bearer ${token}`)
+                .get()((err, response, body) => {
+                    if (err)
+                        reject(`GetGroupList Error ${JSON.stringify(err)}`);
+                    else if (response.statusCode == 200) {
+                        const data = JSON.parse(body);
+                        if (data.code == 0) {
+                            resolve(data.data.grouplist);
+                        } else {
+                            reject(`GetGroupList Error ${data.code} ${data.msg}`);
+                        }
+                    } else {
+                        reject(`GetGroupList Error ${response.statusCode} ${body}`);
+                    }
+                });
+        });
+    }
+
+    clearGroupCache(group_id) {
+        this.robot.brain.remove(`group:${group_id}`);
+    }
+
+    inGroup(open_id, group_id) {
+        return new Promise(async (resolve, reject) => {
+            const user_list = this.robot.brain.get(`group:${group_id}`);
+            if (user_list) {
+                const len = user_list.length;
+                for (let i = 0; i < len; i++) {
+                    if (user_list[i].open_id === open_id) {
+                        resolve(true);
+                        return;
+                    }
+                }
+                resolve(false);
+            } else {
+                const token = await this.getTenantToken();
+                this.robot.http(`https://open.feishu.cn/open-apis/contact/v3/group/${group_id}/member/simplelist`)
+                    .header('Content-Type', 'application/json')
+                    .header('Authorization', `Bearer ${token}`)
+                    .get()((err, response, body) => {
+                        if (err)
+                            reject(`inGroup Error ${JSON.stringify(err)}`);
+                        else if (response.statusCode == 200) {
+                            const data = JSON.parse(body);
+                            if (data.code == 0) {
+                                this.robot.brain.set(`group:${group_id}`, data.data.memberlist);
+                                const len = data.data.memberlist ? data.data.memberlist.length : 0;
+                                for (let i = 0; i < len; i++) {
+                                    if (data.data.memberlist[i].open_id === open_id) {
+                                        resolve(true);
+                                        return;
+                                    }
+                                }
+                                resolve(false);
+                            } else {
+                                reject(`inGroup Error ${data.code} ${data.msg}`);
+                            }
+                        } else {
+                            reject(`inGroup Error ${response.statusCode} ${body}`);
+                        }
+                    });
+            }
+        });
+    }
+
     getRoleList() {
         return new Promise(async (resolve, reject) => {
             const token = await this.getTenantToken();
