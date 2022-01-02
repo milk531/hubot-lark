@@ -418,6 +418,56 @@ class Lark extends Adapter {
             }
         });
     }
+    getDepInfo(dep_id) {
+        return new Promise(async (resolve, reject) => {
+            const token = await this.getTenantToken();
+            this.robot.http(`https://open.feishu.cn/open-apis/contact/v3/departments/${dep_id}`)
+                .header('Content-Type', 'application/json')
+                .header('Authorization', `Bearer ${token}`)
+                .get()((err, response, body) => {
+                    if (err)
+                        reject(`GetDepInfo Error ${JSON.stringify(err)}`);
+                    else if (response.statusCode == 200) {
+                        const data = JSON.parse(body);
+                        if (data.code == 0) {
+                            resolve(data.data.department);
+                        } else {
+                            reject(`GetDepInfo Error ${data.code} ${data.msg}`);
+                        }
+                    } else {
+                        reject(`GetDepInfo Error ${response.statusCode} ${body}`);
+                    }
+                });
+        });
+    }
+
+    getParentDepInfo(dep_id) {
+        return new Promise(async (resolve, reject) => {
+            const token = await this.getTenantToken();
+            this.robot.http(`https://open.feishu.cn/open-apis/contact/v3/departments/parent?department_id=${dep_id}`)
+                .header('Content-Type', 'application/json')
+                .header('Authorization', `Bearer ${token}`)
+                .get()((err, response, body) => {
+                    if (err)
+                        reject(`GetParentDepInfo Error ${JSON.stringify(err)}`);
+                    else if (response.statusCode == 200) {
+                        const data = JSON.parse(body);
+                        if (data.code == 0) {
+                            if(data.data.items.length === 0){
+                                reject('Error, Empty Dep.')
+                            } else {
+                                resolve(data.data.items[data.data.items.length-1]);
+                            }
+                            
+                        } else {
+                            reject(`GetParentDepInfo Error ${data.code} ${data.msg}`);
+                        }
+                    } else {
+                        reject(`GetParentDepInfo Error ${response.statusCode} ${body}`);
+                    }
+                });
+        });
+    }
 
     sendTextMessage(msgBody, {
         user,
