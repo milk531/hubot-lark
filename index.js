@@ -104,7 +104,7 @@ class Lark extends Adapter {
         const authRequest = this.authRequest.bind(this.robot);
         this.robot.router.post('/hubot/subscribe', (req, res) => {
             try {
-                // this.robot.logger.info(`[debug] Lark msg: ${req.body}`);
+                this.robot.logger.info(`[debug] Lark msg: ${JSON.stringify(req.body)}`);
                 const data = authRequest(req);
                 if (data) {
                     const msgType = data.type;
