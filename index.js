@@ -115,7 +115,7 @@ class Lark extends Adapter {
                             });
                             break;
                         case 'event_callback':
-                            this.robot.logger.info(`[debug] event: ${JSON.stringify(data.event)}`);
+                            // this.robot.logger.info(`[debug] event: ${JSON.stringify(data.event)}`);
                             const eventType = data.event.type;
                             if (eventType === 'message') {
                                 const user = new User(data.event.open_id);
@@ -151,14 +151,14 @@ class Lark extends Adapter {
                                 this.robot.logger.info(data.event.before_status);
                                 if (data.event.current_status.is_active && data.event.before_status.is_active != data.event.current_status.is_active) {
                                     this.getUserInfo(data.event.open_id,'open_id').then((user) => {
-                                        this.robot.logger.info(user);
+                                        // this.robot.logger.info(user);
                                         this.robot.emit('lark_user_active', user);
                                     }).catch((err) => {
                                         this.robot.emit('error', err);
                                     });
                                 } else if (data.event.current_status.is_resigned) {
                                     this.getUserInfo(data.event.open_id,'open_id').then((user) => {
-                                        this.robot.logger.info(user);
+                                        // this.robot.logger.info(user);
                                         this.robot.emit('lark_user_resigned', user);
                                     }).catch((err) => {
                                         this.robot.emit('error', err);
