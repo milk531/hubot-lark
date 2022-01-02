@@ -312,7 +312,7 @@ class Lark extends Adapter {
             if (user_list) {
                 const len = user_list.length;
                 for (let i = 0; i < len; i++) {
-                    if (user_list[i].open_id === open_id) {
+                    if (user_list[i].member_id === open_id) {
                         resolve(true);
                         return;
                     }
@@ -332,7 +332,7 @@ class Lark extends Adapter {
                                 this.robot.brain.set(`group:${group_id}`, data.data.memberlist);
                                 const len = data.data.memberlist ? data.data.memberlist.length : 0;
                                 for (let i = 0; i < len; i++) {
-                                    if (data.data.memberlist[i].open_id === open_id) {
+                                    if (data.data.memberlist[i].member_id === open_id) {
                                         resolve(true);
                                         return;
                                     }
