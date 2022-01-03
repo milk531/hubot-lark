@@ -256,6 +256,29 @@ class Lark extends Adapter {
         });
     }
 
+    updateUserInfo(userId,idType,info) {
+        return new Promise(async (resolve, reject) => {
+            const token = await this.getTenantToken();
+            this.robot.http(`https://open.feishu.cn/open-apis/contact/v3/users/${userId}?user_id_type=${idType}`)
+                .header('Content-Type', 'application/json; charset=utf-8')
+                .header('Authorization', `Bearer ${token}`)
+                .patch(info)((err, response, body) => {
+                    if (err)
+                        reject(`UpdateUserInfo Error ${JSON.stringify(err)}`);
+                    else if (response.statusCode == 200) {
+                        const data = JSON.parse(body);
+                        if (data.code == 0) {
+                            resolve(data.data.user);
+                        } else {
+                            reject(`UpdateUserInfo Error ${data.code} ${data.msg}`);
+                        }
+                    } else {
+                        reject(`UpdateUserInfo Error ${response.statusCode} ${body}`);
+                    }
+                });
+        });
+    }
+
     getBotInfo() {
         return new Promise(async (resolve, reject) => {
             const token = await this.getTenantToken();
@@ -418,6 +441,9 @@ class Lark extends Adapter {
             }
         });
     }
+
+
+
     getDepInfo(dep_id) {
         return new Promise(async (resolve, reject) => {
             const token = await this.getTenantToken();
