@@ -513,7 +513,6 @@ class Lark extends Adapter {
                 msg_url = `https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id`;
             }
             else if (user) {
-                console.info(user);
                 cardMsg.receive_id = user;
                 msg_url = `https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=open_id`;
             }
