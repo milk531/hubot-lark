@@ -260,8 +260,9 @@ class Lark extends Adapter {
         return new Promise(async (resolve, reject) => {
             const token = await this.getTenantToken();
             this.robot.http(`https://open.feishu.cn/open-apis/contact/v3/users/${userId}?user_id_type=${idType}`)
-                .header('Content-Type', 'application/json; charset=utf-8')
+                .header('Content-Type', 'application/json')
                 .header('Authorization', `Bearer ${token}`)
+                .header('Cache-Control', 'no-cache')
                 .patch(info)((err, response, body) => {
                     if (err)
                         reject(`UpdateUserInfo Error ${JSON.stringify(err)}`);
