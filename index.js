@@ -263,7 +263,7 @@ class Lark extends Adapter {
                 .header('Content-Type', 'application/json')
                 .header('Authorization', `Bearer ${token}`)
                 .header('Cache-Control', 'no-cache')
-                .patch(info)((err, response, body) => {
+                .patch(JSON.stringify(info))((err, response, body) => {
                     if (err)
                         reject(`UpdateUserInfo Error ${JSON.stringify(err)}`);
                     else if (response.statusCode == 200) {
