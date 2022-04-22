@@ -504,6 +504,29 @@ class Lark extends Adapter {
         });
     }
 
+    updateMsgCard(card,token) {
+        return new Promise(async (resolve, reject) => {
+            const auth_token = await this.getTenantToken();
+            this.robot.http(`https://open.feishu.cn/open-apis/interactive/v1/card/update`)
+                .header('Content-Type', 'application/json')
+                .header('Authorization', `Bearer ${auth_token}`)
+                .post(JSON.stringify({token,card}))((err, response, body) => {
+                    if (err)
+                        reject(`UpdateMsgCard Error ${JSON.stringify(err)}`);
+                    else if (response.statusCode == 200) {
+                        const data = JSON.parse(body);
+                        if (data.code == 0) {
+                            resolve('ok');
+                        } else {
+                            reject(`UpdateMsgCard Error ${data.code} ${data.msg}`);
+                        }
+                    } else {
+                        reject(`UpdateMsgCard Error ${response.statusCode} ${body}`);
+                    }
+                });
+        });
+    }
+
     sendTextMessage(msgBody, {
         user,
         room,
