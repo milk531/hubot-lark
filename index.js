@@ -110,8 +110,8 @@ class Lark extends Adapter {
                     const msgType = data.type;
                     switch (msgType) {
                         case 'interactive':
-                            this.robot.emit('interactive', data);
                             res.send({});
+                            this.robot.emit('interactive', data);
                             break;
                         case 'url_verification':
                             res.send({
