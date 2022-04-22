@@ -104,11 +104,15 @@ class Lark extends Adapter {
         const authRequest = this.authRequest.bind(this.robot);
         this.robot.router.post('/hubot/subscribe', (req, res) => {
             try {
-                this.robot.logger.info(`[debug] Lark msg: ${JSON.stringify(req.body)}`);
+                // this.robot.logger.info(`[debug] Lark msg: ${JSON.stringify(req.body)}`);
                 const data = authRequest(req);
                 if (data) {
                     const msgType = data.type;
                     switch (msgType) {
+                        case 'interactive':
+                            this.robot.emit('interactive', data);
+                            res.send({});
+                            break;
                         case 'url_verification':
                             res.send({
                                 challenge: data.challenge
@@ -191,6 +195,10 @@ class Lark extends Adapter {
     authRequest(req) {
         try {
             const data = req.body.payload ? JSON.parse(req.body.payload) : req.body;
+            if(!data.type && data.tenant_key && data.action && data.token.startsWith('c-')){
+                data.type = 'interactive';
+                return data;
+            }
             if (data.token != process.env.LARK_EVENT_VERIFICATION_TOKEN) {
                 this.emit('error', 'Auth Error');
                 return null;
