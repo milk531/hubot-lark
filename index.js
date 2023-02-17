@@ -9,12 +9,13 @@ const {
 } = require.main.require('hubot/es2015');
 
 class AppMessage extends TextMessage {
-    constructor(user, text, id, appid) {
+    constructor(user, text, id, appid,is_mention) {
         super(user, text, id)
         this.user = user;
         this.appid = appid;
         this.text = text;
         this.id = id;
+        this.is_mention = is_mention;
     }
 }
 
@@ -130,7 +131,8 @@ class Lark extends Adapter {
                                     user,
                                     `spaceship ${data.event.text_without_at_bot}`,
                                     data.event.open_message_id,
-                                    data.event.app_id);
+                                    data.event.app_id,
+                                    data.event.is_mention);
                                 this.robot.receive(message);
                             } else if (eventType === 'add_user_to_chat') {
                                 data.event.users.forEach(u => {
