@@ -8,7 +8,13 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "license": "ISC",
-  "dependencies": {},
+  "dependencies": {
+    "@larksuiteoapi/node-sdk": "^1.19.0",
+    "chai": "^4.3.6",
+    "hubot": "^3.3.2",
+    "sinon": "^13.0.1",
+    "sinon-chai": "^3.7.0"
+  },
   "peerDependencies": {
     "hubot": "^3.3.2"
   },

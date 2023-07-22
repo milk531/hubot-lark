@@ -8,6 +8,8 @@ const {
     User
 } = require.main.require('hubot/es2015');
 
+const lark = require('@larksuiteoapi/node-sdk');
+
 class AppMessage extends TextMessage {
     constructor(user, text, id, appid) {
         super(user, text, id)
@@ -101,12 +103,19 @@ class Lark extends Adapter {
             this.robot.logger.error(err);
         });
 
+        const eventDispatcher = new lark.EventDispatcher().register({
+            'drive.file.bitable_record_changed_v1': async (data) => {
+                this.robot.emit('drive.file.bitable_record_changed_v1', data);
+            }
+        });
+
         const authRequest = this.authRequest.bind(this.robot);
-        this.robot.router.post('/hubot/subscribe', (req, res) => {
+        this.robot.router.post('/hubot/subscribe', async (req, res) => {
             try {
                 // this.robot.logger.info(`[debug] Lark msg: ${JSON.stringify(req.body)}`);
                 const data = authRequest(req);
                 if (data) {
+                    await eventDispatcher.invoke(data.event);
                     const msgType = data.type;
                     switch (msgType) {
                         case 'interactive':
@@ -195,13 +204,20 @@ class Lark extends Adapter {
     authRequest(req) {
         try {
             const data = req.body.payload ? JSON.parse(req.body.payload) : req.body;
-            if(!data.type && data.tenant_key && data.action && data.token.startsWith('c-')){
-                data.type = 'interactive';
-                return data;
-            }
-            if (data.token != process.env.LARK_EVENT_VERIFICATION_TOKEN) {
-                this.emit('error', 'Auth Error');
-                return null;
+            if(data.schema && data.schema == '2.0') {
+                if(data.header.token != process.env.LARK_EVENT_VERIFICATION_TOKEN) {
+                    this.emit('error', 'Auth Error');
+                    return null;
+                }
+            } else {
+                if(!data.type && data.tenant_key && data.action && data.token.startsWith('c-')){
+                    data.type = 'interactive';
+                    return data;
+                }
+                if (data.token != process.env.LARK_EVENT_VERIFICATION_TOKEN) {
+                    this.emit('error', 'Auth Error');
+                    return null;
+                }
             }
             return data;
         } catch (e) {
