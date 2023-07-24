@@ -104,7 +104,7 @@ class Lark extends Adapter {
             this.robot.logger.error(err);
         });
 
-        const eventDispatcher = new lark.EventDispatcher().register({
+        const eventDispatcher = new lark.EventDispatcher({encryptKey:'', verificationToken: process.env.LARK_EVENT_VERIFICATION_TOKEN }).register({
             'drive.file.bitable_record_changed_v1': async (data) => {
                 this.robot.emit('drive.file.bitable_record_changed_v1', data);
             }
@@ -116,7 +116,7 @@ class Lark extends Adapter {
                 // this.robot.logger.info(`[debug] Lark msg: ${JSON.stringify(req.body)}`);
                 const data = authRequest(req);
                 if (data) {
-                    await eventDispatcher.invoke(data.event);
+                    // await eventDispatcher.invoke(data.event);
                     const msgType = data.type;
                     switch (msgType) {
                         case 'interactive':
