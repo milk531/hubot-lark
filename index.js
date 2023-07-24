@@ -116,7 +116,7 @@ class Lark extends Adapter {
                 // this.robot.logger.info(`[debug] Lark msg: ${JSON.stringify(req.body)}`);
                 const data = authRequest(req);
                 if (data) {
-                    // await eventDispatcher.invoke(data.event);
+                    await eventDispatcher.invoke(data.event);
                     const msgType = data.type;
                     switch (msgType) {
                         case 'interactive':
