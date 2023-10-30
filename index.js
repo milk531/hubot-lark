@@ -185,13 +185,15 @@ class Lark extends Adapter {
                             res.send('ok');
                             break;
                         default:
-                            res.sendStatus(404);
+                            res.send('default');
+                            // res.sendStatus(404);
                     }
                 } else {
                     res.sendStatus(401);
                 }
             } catch (e) {
                 this.robot.emit('error', e);
+                res.sendStatus(500);
             }
         });
 
